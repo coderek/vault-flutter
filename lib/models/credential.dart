@@ -1,10 +1,29 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'credential.freezed.dart';
+part 'credential.g.dart';
 
 var uuid = const Uuid();
+
+@freezed
+class Cred with _$Cred {
+  factory Cred({
+    int? id,
+    required String username,
+    required String password,
+    String? decrypted,
+    String? description,
+    String? website,
+    String? category,
+  }) = _Cred;
+  factory Cred.fromJson(Map<String, dynamic> json) => _$CredFromJson(json);
+}
 
 class Credential {
   late String id;
@@ -15,8 +34,13 @@ class Credential {
   String? password;
   String? hashedPassword;
 
-  Credential({required this.username, required this.password, this.description, this.category,
-      this.url, this.hashedPassword}) {
+  Credential(
+      {required this.username,
+      required this.password,
+      this.description,
+      this.category,
+      this.url,
+      this.hashedPassword}) {
     id = uuid.v4();
   }
 
@@ -44,7 +68,7 @@ class Credential {
 }
 
 class Vault extends ChangeNotifier {
-  final List<Credential> credentials = [];
+  final List<Cred> credentials = [];
   final String secret;
 
   Vault({required this.secret}) {
@@ -52,16 +76,15 @@ class Vault extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var jsonString = prefs.getStringList('store');
-    if (jsonString != null) {
-      for (String s in jsonString) {
-        var cred = Credential.fromJson(jsonDecode(s));
-        cred.password = decrypt(cred.hashedPassword!, secret);
-        credentials.add(cred);
+    var hs = {'Authorization': 'Bearer DZYqV4MD{1#{UP!N'};
+    try {
+      var response = await Dio().get('http://localhost:8000/vault/load',
+          options: Options(headers: hs));
+      for (var c in response.data['credentials']) {
+        credentials.add(Cred.fromJson(c));
       }
       notifyListeners();
-    }
+    } catch (e) {}
   }
 
   List<String> get categories {
@@ -75,25 +98,82 @@ class Vault extends ChangeNotifier {
   }
 
   Future<void> _persist() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setStringList(
-        'store', credentials.map((cred) => jsonEncode(cred.toJson())).toList());
-    notifyListeners();
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // prefs.setStringList(
+    //     'store', credentials.map((cred) => jsonEncode(cred.toJson())).toList());
+    // notifyListeners();
   }
 
-  void add(Credential cred) {
-    cred.hashedPassword = encrypt(cred.password!, secret);
-    credentials.add(cred);
-    _persist();
+  void add(Cred cred) async {
+    var hs = {'Authorization': 'Bearer DZYqV4MD{1#{UP!N'};
+    try {
+      var response = await Dio().post('http://localhost:8000/vault/create',
+          data: {
+            'key': secret,
+            'credential': cred.toJson(),
+          },
+          options: Options(headers: hs));
+
+      if (response.statusCode == 200) {
+        credentials.add(cred);
+        notifyListeners();
+      } else {
+        print('failed to save');
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 
-  void remove(Credential cred) {
-    credentials.remove(cred);
-    _persist();
+  void remove(Cred cred) async {
+    var hs = {'Authorization': 'Bearer DZYqV4MD{1#{UP!N'};
+    try {
+      var id = cred.id!;
+      var response = await Dio().delete(
+          'http://localhost:8000/vault/delete/$id',
+          options: Options(headers: hs));
+      if (response.statusCode == 200) {
+        credentials.remove(cred);
+        notifyListeners();
+      } else {
+        print('failed to save');
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 
-  void update(Credential cred) {
-    _persist();
+  void update(Cred old, Cred cred) async {
+    var hs = {'Authorization': 'Bearer DZYqV4MD{1#{UP!N'};
+    try {
+      var id = cred.id!;
+      if (cred.decrypted == null) {
+        var decryptedResponse =
+            await Dio().post('http://localhost:8000/vault/decrypt_one/$id',
+                data: {
+                  'key': secret,
+                },
+                options: Options(headers: hs));
+        assert(decryptedResponse.statusCode == 200);
+        var decrypted = decryptedResponse.data['s'];
+        cred = cred.copyWith(decrypted: decrypted);
+      }
+      var response = await Dio().put('http://localhost:8000/vault/replace',
+          data: {
+            'credential': cred.copyWith(password: cred.decrypted!).toJson(),
+            'key': secret,
+          },
+          options: Options(headers: hs));
+      if (response.statusCode == 200) {
+        var i = credentials.indexOf(old);
+        credentials.replaceRange(i, i + 1, [cred]);
+        notifyListeners();
+      } else {
+        print('failed to save');
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 }
 

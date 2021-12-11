@@ -8,5 +8,5 @@ void main() {
       create: (BuildContext context) {
         return Vault(secret: 'abcdabcdabcdabcd');
       },
-      child: const MyApp()));
+      child: const VaultApp()));
 }

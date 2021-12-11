@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'form_page.dart';
 import '../models/credential.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class VaultApp extends StatelessWidget {
+  const VaultApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
