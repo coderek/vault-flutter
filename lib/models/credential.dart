@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'package:mobx/mobx.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../misc/logger.dart';
@@ -24,45 +24,50 @@ class Cred with _$Cred {
     required String username,
     required String password,
     String? decrypted,
-    String? description,
-    String? website,
-    String? category,
+    required String description,
+    required String website,
+    required String category,
   }) = _Cred;
   factory Cred.fromJson(Map<String, dynamic> json) => _$CredFromJson(json);
 }
 
-class Vault extends ChangeNotifier {
-  final List<Cred> credentials = [];
-  final String secret;
 
-  Vault({required this.secret}) {
+class Vault = _Vault with _$Vault;
+
+abstract class _Vault with Store {
+  @observable
+  ObservableList<Cred> credentials = ObservableList();
+
+  String secret;
+
+  _Vault({required this.secret}) {
     init();
   }
 
-  Future<void> init() async {
+  @action
+  init() async {
     try {
       var response =
           await Dio().get('$base/vault/api/credentials', options: Options(headers: hs));
       for (var c in response.data) {
         credentials.add(Cred.fromJson(c));
       }
-      notifyListeners();
     } catch (e) {
       logger.e(e);
     }
   }
 
+  @computed
   List<String> get categories {
     Set<String> ret = {};
     for (var c in credentials) {
-      if (c.category != null) {
-        ret.add(c.category!);
-      }
+      ret.add(c.category);
     }
     return ret.toList();
   }
 
-  void add(Cred cred) async {
+  @action
+  add(Cred cred) async {
     try {
       var response = await Dio().post('$base/vault/api/credentials',
           data: {
@@ -72,8 +77,8 @@ class Vault extends ChangeNotifier {
           options: Options(headers: hs));
 
       if (response.statusCode == 200) {
-        credentials.add(cred);
-        notifyListeners();
+        final id = response.data['id'];
+        credentials.insert(0, cred.copyWith(id: id));
       } else {
         logger.w('Failed to decrypt password.');
       }
@@ -82,14 +87,14 @@ class Vault extends ChangeNotifier {
     }
   }
 
-  void remove(Cred cred) async {
+  @action
+  remove(Cred cred) async {
     try {
       var id = cred.id!;
       var response = await Dio().delete('$base/vault/api/credentials/$id',
           options: Options(headers: hs));
       if (response.statusCode == 200) {
         credentials.remove(cred);
-        notifyListeners();
       } else {
         logger.w('Failed to save');
       }
@@ -98,17 +103,15 @@ class Vault extends ChangeNotifier {
     }
   }
 
-  void update(Cred old, Cred cred) async {
+  @action
+  update(Cred old, Cred cred) async {
     try {
-      var id = cred.id!;
+      var id = cred.id;
+      assert(id != null, 'update cred with null id');
       if (cred.decrypted == null) {
-        var decryptedResponse = await Dio().post('$base/vault/credentials/$id',
-            data: {
-              'key': secret,
-              'credential': cred.toJson(),
-            },
+        var decryptedResponse = await Dio().get('$base/vault/api/credentials/$id?key=$secret',
             options: Options(headers: hs));
-        assert(decryptedResponse.statusCode == 200);
+        assert(decryptedResponse.statusCode == 200, 'can\'t decrpyt');
         var decrypted = decryptedResponse.data['s'];
         cred = cred.copyWith(decrypted: decrypted);
       }
@@ -121,7 +124,6 @@ class Vault extends ChangeNotifier {
       if (response.statusCode == 200) {
         var i = credentials.indexOf(old);
         credentials.replaceRange(i, i + 1, [cred]);
-        notifyListeners();
       } else {
         logger.w('Failed to save');
       }

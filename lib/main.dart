@@ -3,11 +3,10 @@ import 'package:provider/provider.dart';
 import 'components/main_page.dart';
 import 'models/credential.dart';
 
-
-const encryptionKey = String.fromEnvironment('ENCRYPTION_KEY');
+const encryptionKey = String.fromEnvironment('ENCRYPTION_KEY', defaultValue: 'whatthefuck'); 
 
 void main() {
-  runApp(ChangeNotifierProvider(
+  runApp(Provider(
       create: (BuildContext context) {
         return Vault(secret: encryptionKey);
       },

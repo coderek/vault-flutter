@@ -26,9 +26,9 @@ class _$CredTearOff {
       required String username,
       required String password,
       String? decrypted,
-      String? description,
-      String? website,
-      String? category}) {
+      required String description,
+      required String website,
+      required String category}) {
     return _Cred(
       id: id,
       username: username,
@@ -54,9 +54,9 @@ mixin _$Cred {
   String get username => throw _privateConstructorUsedError;
   String get password => throw _privateConstructorUsedError;
   String? get decrypted => throw _privateConstructorUsedError;
-  String? get description => throw _privateConstructorUsedError;
-  String? get website => throw _privateConstructorUsedError;
-  String? get category => throw _privateConstructorUsedError;
+  String get description => throw _privateConstructorUsedError;
+  String get website => throw _privateConstructorUsedError;
+  String get category => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -72,9 +72,9 @@ abstract class $CredCopyWith<$Res> {
       String username,
       String password,
       String? decrypted,
-      String? description,
-      String? website,
-      String? category});
+      String description,
+      String website,
+      String category});
 }
 
 /// @nodoc
@@ -115,15 +115,15 @@ class _$CredCopyWithImpl<$Res> implements $CredCopyWith<$Res> {
       description: description == freezed
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       website: website == freezed
           ? _value.website
           : website // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       category: category == freezed
           ? _value.category
           : category // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
     ));
   }
 }
@@ -138,9 +138,9 @@ abstract class _$CredCopyWith<$Res> implements $CredCopyWith<$Res> {
       String username,
       String password,
       String? decrypted,
-      String? description,
-      String? website,
-      String? category});
+      String description,
+      String website,
+      String category});
 }
 
 /// @nodoc
@@ -182,15 +182,15 @@ class __$CredCopyWithImpl<$Res> extends _$CredCopyWithImpl<$Res>
       description: description == freezed
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       website: website == freezed
           ? _value.website
           : website // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       category: category == freezed
           ? _value.category
           : category // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
     ));
   }
 }
@@ -203,9 +203,9 @@ class _$_Cred implements _Cred {
       required this.username,
       required this.password,
       this.decrypted,
-      this.description,
-      this.website,
-      this.category});
+      required this.description,
+      required this.website,
+      required this.category});
 
   factory _$_Cred.fromJson(Map<String, dynamic> json) => _$$_CredFromJson(json);
 
@@ -218,11 +218,11 @@ class _$_Cred implements _Cred {
   @override
   final String? decrypted;
   @override
-  final String? description;
+  final String description;
   @override
-  final String? website;
+  final String website;
   @override
-  final String? category;
+  final String category;
 
   @override
   String toString() {
@@ -272,9 +272,9 @@ abstract class _Cred implements Cred {
       required String username,
       required String password,
       String? decrypted,
-      String? description,
-      String? website,
-      String? category}) = _$_Cred;
+      required String description,
+      required String website,
+      required String category}) = _$_Cred;
 
   factory _Cred.fromJson(Map<String, dynamic> json) = _$_Cred.fromJson;
 
@@ -287,11 +287,11 @@ abstract class _Cred implements Cred {
   @override
   String? get decrypted;
   @override
-  String? get description;
+  String get description;
   @override
-  String? get website;
+  String get website;
   @override
-  String? get category;
+  String get category;
   @override
   @JsonKey(ignore: true)
   _$CredCopyWith<_Cred> get copyWith => throw _privateConstructorUsedError;
