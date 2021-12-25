@@ -93,6 +93,15 @@ mixin _$Vault on _Vault, Store {
     return _$updateAsyncAction.run(() => super.update(old, cred));
   }
 
+  final _$loadPasswordForCredAtAsyncAction =
+      AsyncAction('_Vault.loadPasswordForCredAt');
+
+  @override
+  Future loadPasswordForCredAt(int index) {
+    return _$loadPasswordForCredAtAsyncAction
+        .run(() => super.loadPasswordForCredAt(index));
+  }
+
   @override
   String toString() {
     return '''

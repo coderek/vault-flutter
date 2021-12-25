@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'form_page.dart';
 import '../models/credential.dart';
 
@@ -27,6 +28,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vault = Provider.of<Vault>(context);
+    vault.init();
 
     return Scaffold(
       appBar: AppBar(
@@ -42,12 +44,21 @@ class MyHomePage extends StatelessWidget {
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(vault.credentials[index].username),
-                            onTap: () {
-                              Navigator.pushNamed(context, '/form',
-                                  arguments: vault.credentials[index]);
+                            onTap: () async {
+                              try {
+                                await vault.loadPasswordForCredAt(index);
+                                Navigator.pushNamed(context, '/form',
+                                    arguments: vault.credentials[index]);
+                              } catch (e) {
+                                Fluttertoast.showToast(
+                                  msg: 'failed to decrypt the credential',
+                                  backgroundColor: Colors.red,
+                                  textColor: Colors.white
+                                );
+                              }
                             },
-                            subtitle: Text(
-                                vault.credentials[index].description),
+                            subtitle:
+                                Text(vault.credentials[index].description),
                             trailing: IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () {
@@ -61,8 +72,8 @@ class MyHomePage extends StatelessWidget {
                                               actions: [
                                                 TextButton(
                                                     child: const Text('Ok'),
-                                                    onPressed: () {
-                                                      vault.remove(vault
+                                                    onPressed: () async {
+                                                      await vault.remove(vault
                                                           .credentials[index]);
                                                       Navigator.pop(
                                                           context, 'OK');

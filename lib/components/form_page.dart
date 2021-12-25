@@ -20,18 +20,27 @@ class _CredentialForm extends State<CredentialForm> {
   String? _category;
   String? _tmpDialogCat;
   bool _showPassword = false;
+  var passwordController = TextEditingController();
 
   final List<String> _newCat = [];
 
   @override
+  void dispose() {
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cred = ModalRoute.of(context)!.settings.arguments as Cred?;
-    // if (cred?.category != null) {
-    //   _newCat.add(cred!.category!);
-    // }
     List<String> categories = _newCat
       ..addAll(Provider.of<Vault>(context).categories);
     final vault = Provider.of<Vault>(context);
+    if (_showPassword) {
+      passwordController.value = passwordController.value.copyWith(text: cred!.password);
+    } else {
+      passwordController.value = passwordController.value.copyWith(text: 'abcdefabcdefabcdef');
+    }
 
     return Scaffold(
         appBar: AppBar(
@@ -66,7 +75,7 @@ class _CredentialForm extends State<CredentialForm> {
                               Padding(
                                   padding: const EdgeInsets.only(top: 10),
                                   child: TextFormField(
-                                      initialValue: cred?.password,
+                                      controller: passwordController,
                                       onSaved: (s) => _password = s,
                                       obscureText: !_showPassword,
                                       decoration: InputDecoration(
@@ -179,9 +188,8 @@ class _CredentialForm extends State<CredentialForm> {
                               ]),
                                Padding(
                               padding: const EdgeInsets.only(top: 10),
-                              child: Observer(
-                                  name: 'form action',
-                                  builder: (_) => ElevatedButton(
+                              child: 
+                                  ElevatedButton(
                                         onPressed: () {
                                           if (_formKey.currentState!
                                               .validate()) {
@@ -195,9 +203,7 @@ class _CredentialForm extends State<CredentialForm> {
                                                 description: _description ?? '',
                                               );
 
-                                              setState(() {
-                                                vault.update(cred, c);
-                                              });
+                                              vault.update(cred, c);
                                             } else {
                                               var cred = Cred(
                                                   username: _username!,
@@ -205,9 +211,7 @@ class _CredentialForm extends State<CredentialForm> {
                                                   website: _url ?? '',
                                                   category: _category ?? '',
                                                   description: _description ?? '');
-                                              setState(() {
-                                                vault.add(cred);
-                                              });
+                                              vault.add(cred);
                                             }
                                             Navigator.pop(context);
                                           }
@@ -215,7 +219,7 @@ class _CredentialForm extends State<CredentialForm> {
                                         child: cred == null
                                             ? const Text('Create')
                                             : const Text('Save'),
-                                      ))),
+                                      )),
                           const Padding(
                             padding: EdgeInsets.only(top: 10),
                             child: Divider(),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:mobx/mobx.dart';
 import 'package:uuid/uuid.dart';
@@ -9,12 +10,18 @@ import '../misc/logger.dart';
 part 'credential.freezed.dart';
 part 'credential.g.dart';
 
+var envars = Platform.environment;
+var isProd = envars['ENV'] == 'prod';
+
 var uuid = const Uuid();
-var base = 'http://localhost:8000';
-// var base = 'https://derekzeng.me'; // prod
+var base = isProd? 'https://derekzeng.me': 'http://localhost:8000';
+
 var hs = {
-  'Authorization': 'Token 41f6bfb5fb56fd082731bf9b8de1a624e973e9de'
-  // 'Authorization': 'Token e615966b599918f43f661677f40e139880abb780' // prod
+  'Authorization': isProd
+      ? 'Token e615966b599918f43f661677f40e139880abb780'
+      : 'Token 41f6bfb5fb56fd082731bf9b8de1a624e973e9de',
+  'Content-type' : 'application/json', 
+  'Accept': 'application/json',
 };
 
 @freezed
@@ -39,17 +46,20 @@ abstract class _Vault with Store {
 
   String secret;
 
-  _Vault({required this.secret}) {
-    init();
-  }
+  _Vault({required this.secret});
 
   @action
   init() async {
     var uri = Uri.parse('$base/vault/api/credentials');
     var response = await http.get(uri, headers: hs);
-    var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes)) as List;
-    for (var c in decodedResponse) {
-      credentials.add(Cred.fromJson(c));
+    if (response.statusCode == 200) {
+      var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes));
+      credentials.clear();
+      for (var c in decodedResponse) {
+        credentials.add(Cred.fromJson(c));
+      }
+    } else {
+      logger.e('Failed to get credentials');
     }
   }
 
@@ -95,27 +105,32 @@ abstract class _Vault with Store {
   @action
   update(Cred old, Cred cred) async {
     var id = cred.id;
-    var uri = Uri.parse('$base/vault/api/credentials/$id?key=$secret');
-    assert(id != null, 'update cred with null id');
-    if (cred.decrypted == null) {
-      var decryptedResponse = await http.get(uri, headers: hs);
-      assert(decryptedResponse.statusCode == 200, 'can\'t decrpyt');
-      var data = jsonDecode(utf8.decode(decryptedResponse.bodyBytes));
-      var decrypted = data['s'];
-      cred = cred.copyWith(decrypted: decrypted);
-    }
-    uri = Uri.parse('$base/vault/api/credentials/$id');
+    var uri = Uri.parse('$base/vault/api/credentials/$id');
     var response = await http.put(uri,
-        body: {
-          'credential': cred.copyWith(password: cred.decrypted!).toJson(),
+        body: jsonEncode({
+          'credential': cred.toJson(),
           'key': secret,
-        },
+        }),
         headers: hs);
     if (response.statusCode == 200) {
       var i = credentials.indexOf(old);
       credentials.replaceRange(i, i + 1, [cred]);
     } else {
       logger.w('Failed to save');
+    }
+  }
+  @action
+  loadPasswordForCredAt(int index) async {
+    var cred = credentials[index];
+    var uri = Uri.parse('$base/vault/api/credentials/${cred.id}?key=$secret');
+    assert(cred.id != null, 'update cred with null id');
+    if (cred.decrypted == null) {
+      var decryptedResponse = await http.get(uri, headers: hs);
+      assert(decryptedResponse.statusCode == 200, 'can\'t decrpyt');
+      var data = jsonDecode(utf8.decode(decryptedResponse.bodyBytes));
+      var decrypted = data['s'];
+      cred = cred.copyWith(password: decrypted);
+      credentials.replaceRange(index, index + 1, [cred]);
     }
   }
 }
