@@ -15,6 +15,7 @@ var isProd = envars['ENV'] == 'prod';
 
 var uuid = const Uuid();
 var base = isProd? 'https://derekzeng.me': 'http://localhost:8000';
+var key = isProd? "Da(r_gAjuu(p9k,rAKC%2*d\\5tTwt>pwp": 'whatthefuck';
 
 var hs = {
   'Authorization': isProd
@@ -44,9 +45,9 @@ abstract class _Vault with Store {
   @observable
   ObservableList<Cred> credentials = ObservableList();
 
-  String secret;
+  String secret = key;
 
-  _Vault({required this.secret});
+  // _Vault({required this.secret});
 
   @action
   init() async {
@@ -76,10 +77,10 @@ abstract class _Vault with Store {
   add(Cred cred) async {
     var uri = Uri.parse('$base/vault/api/credentials');
     var response = await http.post(uri,
-        body: {
+        body: jsonEncode({
           'key': secret,
           'credential': cred.toJson(),
-        },
+        }),
         headers: hs);
     if (response.statusCode == 200) {
       var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes)) as Map;

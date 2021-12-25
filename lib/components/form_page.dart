@@ -20,15 +20,15 @@ class _CredentialForm extends State<CredentialForm> {
   String? _category;
   String? _tmpDialogCat;
   bool _showPassword = false;
-  var passwordController = TextEditingController();
+  // var passwordController = TextEditingController();
 
   final List<String> _newCat = [];
 
-  @override
-  void dispose() {
-    passwordController.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   passwordController.dispose();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +36,11 @@ class _CredentialForm extends State<CredentialForm> {
     List<String> categories = _newCat
       ..addAll(Provider.of<Vault>(context).categories);
     final vault = Provider.of<Vault>(context);
-    if (_showPassword) {
-      passwordController.value = passwordController.value.copyWith(text: cred!.password);
-    } else {
-      passwordController.value = passwordController.value.copyWith(text: 'abcdefabcdefabcdef');
-    }
+    // if (_showPassword) {
+    //   passwordController.value = passwordController.value.copyWith(text: cred?.password ?? passwordController.text);
+    // } else {
+    //   passwordController.value = passwordController.value.copyWith(text: cred != null ? 'abcdefabcdefabcdef': '');
+    // }
 
     return Scaffold(
         appBar: AppBar(
@@ -75,7 +75,7 @@ class _CredentialForm extends State<CredentialForm> {
                               Padding(
                                   padding: const EdgeInsets.only(top: 10),
                                   child: TextFormField(
-                                      controller: passwordController,
+                                      initialValue: cred?.password ?? '',
                                       onSaved: (s) => _password = s,
                                       obscureText: !_showPassword,
                                       decoration: InputDecoration(
