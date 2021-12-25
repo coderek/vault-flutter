@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:mobx/mobx.dart';
-import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -31,7 +31,6 @@ class Cred with _$Cred {
   factory Cred.fromJson(Map<String, dynamic> json) => _$CredFromJson(json);
 }
 
-
 class Vault = _Vault with _$Vault;
 
 abstract class _Vault with Store {
@@ -46,14 +45,11 @@ abstract class _Vault with Store {
 
   @action
   init() async {
-    try {
-      var response =
-          await Dio().get('$base/vault/api/credentials', options: Options(headers: hs));
-      for (var c in response.data) {
-        credentials.add(Cred.fromJson(c));
-      }
-    } catch (e) {
-      logger.e(e);
+    var uri = Uri.parse('$base/vault/api/credentials');
+    var response = await http.get(uri, headers: hs);
+    var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes)) as List;
+    for (var c in decodedResponse) {
+      credentials.add(Cred.fromJson(c));
     }
   }
 
@@ -68,67 +64,58 @@ abstract class _Vault with Store {
 
   @action
   add(Cred cred) async {
-    try {
-      var response = await Dio().post('$base/vault/api/credentials',
-          data: {
-            'key': secret,
-            'credential': cred.toJson(),
-          },
-          options: Options(headers: hs));
-
-      if (response.statusCode == 200) {
-        final id = response.data['id'];
-        credentials.insert(0, cred.copyWith(id: id));
-      } else {
-        logger.w('Failed to decrypt password.');
-      }
-    } catch (e) {
-      logger.e(e);
+    var uri = Uri.parse('$base/vault/api/credentials');
+    var response = await http.post(uri,
+        body: {
+          'key': secret,
+          'credential': cred.toJson(),
+        },
+        headers: hs);
+    if (response.statusCode == 200) {
+      var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes)) as Map;
+      final id = decodedResponse['id'];
+      credentials.insert(0, cred.copyWith(id: id));
+    } else {
+      logger.w('Failed to decrypt password.');
     }
   }
 
   @action
   remove(Cred cred) async {
-    try {
-      var id = cred.id!;
-      var response = await Dio().delete('$base/vault/api/credentials/$id',
-          options: Options(headers: hs));
-      if (response.statusCode == 200) {
-        credentials.remove(cred);
-      } else {
-        logger.w('Failed to save');
-      }
-    } catch (e) {
-      logger.e(e);
+    var id = cred.id!;
+    var uri = Uri.parse('$base/vault/api/credentials/$id');
+    var response = await http.delete(uri, headers: hs);
+    if (response.statusCode == 200) {
+      credentials.remove(cred);
+    } else {
+      logger.w('Failed to save');
     }
   }
 
   @action
   update(Cred old, Cred cred) async {
-    try {
-      var id = cred.id;
-      assert(id != null, 'update cred with null id');
-      if (cred.decrypted == null) {
-        var decryptedResponse = await Dio().get('$base/vault/api/credentials/$id?key=$secret',
-            options: Options(headers: hs));
-        assert(decryptedResponse.statusCode == 200, 'can\'t decrpyt');
-        var decrypted = decryptedResponse.data['s'];
-        cred = cred.copyWith(decrypted: decrypted);
-      }
-      var response = await Dio().put('$base/vault/api/credentials/$id',
-          data: {
-            'credential': cred.copyWith(password: cred.decrypted!).toJson(),
-            'key': secret,
-          },
-          options: Options(headers: hs));
-      if (response.statusCode == 200) {
-        var i = credentials.indexOf(old);
-        credentials.replaceRange(i, i + 1, [cred]);
-      } else {
-        logger.w('Failed to save');
-      }
-    } catch (e) {
-      logger.e(e);
+    var id = cred.id;
+    var uri = Uri.parse('$base/vault/api/credentials/$id?key=$secret');
+    assert(id != null, 'update cred with null id');
+    if (cred.decrypted == null) {
+      var decryptedResponse = await http.get(uri, headers: hs);
+      assert(decryptedResponse.statusCode == 200, 'can\'t decrpyt');
+      var data = jsonDecode(utf8.decode(decryptedResponse.bodyBytes));
+      var decrypted = data['s'];
+      cred = cred.copyWith(decrypted: decrypted);
+    }
+    uri = Uri.parse('$base/vault/api/credentials/$id');
+    var response = await http.put(uri,
+        body: {
+          'credential': cred.copyWith(password: cred.decrypted!).toJson(),
+          'key': secret,
+        },
+        headers: hs);
+    if (response.statusCode == 200) {
+      var i = credentials.indexOf(old);
+      credentials.replaceRange(i, i + 1, [cred]);
+    } else {
+      logger.w('Failed to save');
     }
   }
 }
