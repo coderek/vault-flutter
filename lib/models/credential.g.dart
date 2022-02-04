@@ -50,18 +50,18 @@ mixin _$Vault on _Vault, Store {
               name: '_Vault.categories'))
           .value;
 
-  final _$credentialsAtom = Atom(name: '_Vault.credentials');
+  final _$_credentialsAtom = Atom(name: '_Vault._credentials');
 
   @override
-  ObservableList<Cred> get credentials {
-    _$credentialsAtom.reportRead();
-    return super.credentials;
+  ObservableList<Cred> get _credentials {
+    _$_credentialsAtom.reportRead();
+    return super._credentials;
   }
 
   @override
-  set credentials(ObservableList<Cred> value) {
-    _$credentialsAtom.reportWrite(value, super.credentials, () {
-      super.credentials = value;
+  set _credentials(ObservableList<Cred> value) {
+    _$_credentialsAtom.reportWrite(value, super._credentials, () {
+      super._credentials = value;
     });
   }
 
@@ -105,7 +105,6 @@ mixin _$Vault on _Vault, Store {
   @override
   String toString() {
     return '''
-credentials: ${credentials},
 categories: ${categories}
     ''';
   }

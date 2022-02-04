@@ -197,7 +197,7 @@ class __$CredCopyWithImpl<$Res> extends _$CredCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$_Cred implements _Cred {
+class _$_Cred extends _Cred {
   _$_Cred(
       {this.id,
       required this.username,
@@ -205,7 +205,8 @@ class _$_Cred implements _Cred {
       this.decrypted,
       required this.description,
       required this.website,
-      required this.category});
+      required this.category})
+      : super._();
 
   factory _$_Cred.fromJson(Map<String, dynamic> json) => _$$_CredFromJson(json);
 
@@ -266,7 +267,7 @@ class _$_Cred implements _Cred {
   }
 }
 
-abstract class _Cred implements Cred {
+abstract class _Cred extends Cred {
   factory _Cred(
       {int? id,
       required String username,
@@ -275,6 +276,7 @@ abstract class _Cred implements Cred {
       required String description,
       required String website,
       required String category}) = _$_Cred;
+  _Cred._() : super._();
 
   factory _Cred.fromJson(Map<String, dynamic> json) = _$_Cred.fromJson;
 

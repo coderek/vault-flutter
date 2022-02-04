@@ -14,19 +14,21 @@ var envars = Platform.environment;
 var isProd = envars['ENV'] == 'prod';
 
 var uuid = const Uuid();
-var base = isProd? 'https://derekzeng.me': 'http://localhost:8000';
-var key = isProd? "Da(r_gAjuu(p9k,rAKC%2*d\\5tTwt>pwp": 'whatthefuck';
+var base = isProd ? 'https://derekzeng.me' : 'http://localhost:8000';
+var key = isProd ? "Da(r_gAjuu(p9k,rAKC%2*d\\5tTwt>pwp" : 'whatthefuck';
 
 var hs = {
   'Authorization': isProd
       ? 'Token e615966b599918f43f661677f40e139880abb780'
       : 'Token 41f6bfb5fb56fd082731bf9b8de1a624e973e9de',
-  'Content-type' : 'application/json', 
+  'Content-type': 'application/json',
   'Accept': 'application/json',
 };
 
 @freezed
 class Cred with _$Cred {
+  // required for custom method
+  const Cred._();
   factory Cred({
     int? id,
     required String username,
@@ -37,17 +39,35 @@ class Cred with _$Cred {
     required String category,
   }) = _Cred;
   factory Cred.fromJson(Map<String, dynamic> json) => _$CredFromJson(json);
+  bool match(String term) {
+    if (term.isEmpty) {
+      return true;
+    }
+    var s = RegExp(term, caseSensitive: false);
+    return s.hasMatch(username) ||
+        s.hasMatch(description) ||
+        s.hasMatch(website) ||
+        s.hasMatch(category);
+  }
 }
 
 class Vault = _Vault with _$Vault;
 
 abstract class _Vault with Store {
   @observable
-  ObservableList<Cred> credentials = ObservableList();
+  ObservableList<Cred> _credentials = ObservableList();
 
   String secret = key;
 
-  // _Vault({required this.secret});
+  List<Cred> getCredentials(String search) {
+    List<Cred> filteredList = [];
+    for (Cred cred in _credentials) {
+      if (cred.match(search)) {
+        filteredList.add(cred);
+      }
+    }
+    return filteredList;
+  }
 
   @action
   init() async {
@@ -55,9 +75,9 @@ abstract class _Vault with Store {
     var response = await http.get(uri, headers: hs);
     if (response.statusCode == 200) {
       var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes));
-      credentials.clear();
+      _credentials.clear();
       for (var c in decodedResponse) {
-        credentials.add(Cred.fromJson(c));
+        _credentials.add(Cred.fromJson(c));
       }
     } else {
       logger.e('Failed to get credentials');
@@ -67,7 +87,7 @@ abstract class _Vault with Store {
   @computed
   List<String> get categories {
     Set<String> ret = {};
-    for (var c in credentials) {
+    for (var c in _credentials) {
       ret.add(c.category);
     }
     return ret.toList();
@@ -85,7 +105,7 @@ abstract class _Vault with Store {
     if (response.statusCode == 200) {
       var decodedResponse = jsonDecode(utf8.decode(response.bodyBytes)) as Map;
       final id = decodedResponse['id'];
-      credentials.insert(0, cred.copyWith(id: id));
+      _credentials.insert(0, cred.copyWith(id: id));
     } else {
       logger.w('Failed to decrypt password.');
     }
@@ -97,7 +117,7 @@ abstract class _Vault with Store {
     var uri = Uri.parse('$base/vault/api/credentials/$id');
     var response = await http.delete(uri, headers: hs);
     if (response.statusCode == 200) {
-      credentials.remove(cred);
+      _credentials.remove(cred);
     } else {
       logger.w('Failed to save');
     }
@@ -114,15 +134,16 @@ abstract class _Vault with Store {
         }),
         headers: hs);
     if (response.statusCode == 200) {
-      var i = credentials.indexOf(old);
-      credentials.replaceRange(i, i + 1, [cred]);
+      var i = _credentials.indexOf(old);
+      _credentials.replaceRange(i, i + 1, [cred]);
     } else {
       logger.w('Failed to save');
     }
   }
+
   @action
   loadPasswordForCredAt(int index) async {
-    var cred = credentials[index];
+    var cred = _credentials[index];
     var uri = Uri.parse('$base/vault/api/credentials/${cred.id}?key=$secret');
     assert(cred.id != null, 'update cred with null id');
     if (cred.decrypted == null) {
@@ -131,7 +152,7 @@ abstract class _Vault with Store {
       var data = jsonDecode(utf8.decode(decryptedResponse.bodyBytes));
       var decrypted = data['s'];
       cred = cred.copyWith(password: decrypted);
-      credentials.replaceRange(index, index + 1, [cred]);
+      _credentials.replaceRange(index, index + 1, [cred]);
     }
   }
 }
